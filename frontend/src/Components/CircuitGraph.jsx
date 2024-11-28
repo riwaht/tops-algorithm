@@ -49,15 +49,16 @@ function CircuitGraph({ data, faultSite, nodeValues, dFrontier }) {
         }
 
         // Tooltip data
-        const tooltipData = `Node ID: ${node.id}\nValue: ${nodeValue}`;
+        const tooltipData = `Node ID: ${node.id}\nType: ${node.label}\nValue: ${nodeValue}`;
 
+        // Modify the label to show the node ID and type
         return {
             ...node,
             color: nodeColor,
-            label: `${node.label} (${nodeValue})`,
+            label: `${node.id} ${ node.label }(${nodeValue})`,  // Changed label to use node.id
             strokeColor: strokeColor,
             strokeWidth: strokeWidth,
-            svgTitle: tooltipData,
+            svgTitle: tooltipData,  // This will show up as a tooltip on hover
         };
     });
 
