@@ -54,21 +54,24 @@ function App() {
   const [dFrontier, setDFrontier] = useState([]);
   const [basisNodes, setBasisNodes] = useState([]);
   const [dominators, setDominators] = useState({});
+  const [absoluteDominators, setAbsoluteDominators] = useState({});
   const [processedDFrontierNodes, setProcessedDFrontierNodes] = useState(new Set());
   const [faultConeQueue, setFaultConeQueue] = useState([]);
   const [isTracing, setIsTracing] = useState(false);
   const [currentGateProcessing, setCurrentGateProcessing] = useState(null);
+  const [testPatternFound, setTestPatternFound] = useState(false);
+  const [isCleaningUp, setIsCleaningUp] = useState(false); // New state for cleanup flag
 
   // Preprocessing to calculate basis-nodes and dominators
   useEffect(() => {
-    const { calculatedBasisNodes, calculatedDominators } = preprocessCircuit(data);
+    const { calculatedBasisNodes, calculatedDominators, calculatedAbsoluteDominators } = preprocessCircuit(data);
     setBasisNodes(calculatedBasisNodes);
     setDominators(calculatedDominators);
+    setAbsoluteDominators(calculatedAbsoluteDominators);
   }, [data]);
 
   const preprocessCircuit = (circuitData) => {
     const calculatedBasisNodes = ["Input1", "Input2", "Input3", "Input4", "Input5", "Input6"];
-
     const calculatedDominators = {
       Gate1: ["Gate1", "Gate3", "Gate4", "Gate5", "Gate6", "Output1"],
       Gate2: ["Gate2", "Gate3", "Gate4", "Gate5", "Gate6", "Output1"],
@@ -76,12 +79,58 @@ function App() {
       Gate4: ["Gate4", "Gate5", "Gate6", "Output1"],
       Gate5: ["Gate5", "Gate6", "Output1"],
       Gate6: ["Gate6", "Output1"],
+      Output1: ["Output1"],
+      Input1: ["Input1"],
+      Input2: ["Input2"],
+      Input3: ["Input3"],
+      Input4: ["Input4"],
+      Input5: ["Input5"],
+      Input6: ["Input6"],
     };
+
+    // Calculate absolute dominators
+    const outputs = data.nodes.filter((n) => n.label === "Output").map((n) => n.id);
+    const calculatedAbsoluteDominators = {};
+
+    data.nodes.forEach((node) => {
+      const reachableOutputs = getReachableOutputs(node.id, outputs, circuitData);
+      if (reachableOutputs.length === 0) return;
+      let intersection = null;
+      reachableOutputs.forEach((output) => {
+        if (intersection === null) {
+          intersection = new Set(calculatedDominators[output]);
+        } else {
+          intersection = new Set([...intersection].filter((x) => calculatedDominators[output].includes(x)));
+        }
+      });
+      calculatedAbsoluteDominators[node.id] = intersection ? Array.from(intersection) : [];
+    });
 
     return {
       calculatedBasisNodes,
       calculatedDominators,
+      calculatedAbsoluteDominators,
     };
+  };
+
+  const getReachableOutputs = (nodeId, outputs, circuitData) => {
+    const reachable = [];
+    const queue = [nodeId];
+    const visited = new Set();
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (visited.has(current)) continue;
+      visited.add(current);
+      if (outputs.includes(current)) {
+        reachable.push(current);
+        continue;
+      }
+      const children = getGateOutputs(current);
+      queue.push(...children);
+    }
+
+    return reachable;
   };
 
   // Fault Sensitization
@@ -197,8 +246,8 @@ function App() {
         const inputs = getGateInputs(currentNodeId);
         inputs.forEach((inputId) => {
           if (newValues[inputId] === "X") {
-            // Assign controlling value to inputs to activate the fault
-            newValues[inputId] = getControllingValue(gateType);
+            const controllingValue = getControllingValue(gateType);
+            newValues[inputId] = controllingValue;
             console.log(`Assigned controlling value "${newValues[inputId]}" to ${inputId}`);
             queue.push(inputId);
           } else if (newValues[inputId] !== getControllingValue(gateType)) {
@@ -353,8 +402,10 @@ function App() {
     }
 
     if (faultConeQueue.length === 0) {
-      alert("Fault cone tracing complete.");
-      console.log("Fault cone tracing complete.");
+      if (!testPatternFound) {
+        alert("Fault cone tracing complete.");
+        console.log("Fault cone tracing complete.");
+      }
       setIsTracing(false);
       setCurrentGateProcessing(null);
       return;
@@ -385,7 +436,7 @@ function App() {
         if (newValues[inputId] === "X") {
           const controllingValue = getControllingValue(gateType);
           newValues[inputId] = controllingValue;
-          console.log(`Assigned controlling value "${controllingValue}" to ${inputId}`);
+          console.log(`Assigned controlling value "${newValues[inputId]}" to ${inputId}`);
         }
       });
 
@@ -414,14 +465,17 @@ function App() {
         console.log("Conflict detected during fault cone tracing. Fault is redundant.");
         setIsTracing(false);
         setCurrentGateProcessing(null);
+        return;
       }
 
       // Check if a test pattern is found
       if (checkForTest(newValues)) {
         alert("Test pattern found! Fault propagated to primary output.");
         console.log("Test pattern found! Fault propagated to primary output.");
+        setTestPatternFound(true);
         setIsTracing(false);
         setCurrentGateProcessing(null);
+        return;
       }
 
       return; // Exit early to prevent further processing
@@ -485,6 +539,7 @@ function App() {
     if (checkForTest(newValues)) {
       alert("Test pattern found! Fault propagated to primary output.");
       console.log("Test pattern found! Fault propagated to primary output.");
+      setTestPatternFound(true);
       setIsTracing(false);
       setCurrentGateProcessing(null);
     }
@@ -555,6 +610,7 @@ function App() {
       "NOR Gate": "1",
       "XOR Gate": "X", // XOR gates require special handling
       "NOT Gate": "X", // For NOT gates, special handling is needed
+      "Output": "X",
     };
     return gateControllingValues[gateType] || "X";
   };
@@ -567,6 +623,7 @@ function App() {
       "NOR Gate": "0",
       "XOR Gate": "0", // XOR gates require special handling
       "NOT Gate": "X", // For NOT gates, special handling is needed
+      "Output": "X",
     };
     return gateNonControllingValues[gateType] || "X";
   };
@@ -590,7 +647,6 @@ function App() {
 
   const checkForTest = (values) => {
     if (values["Output1"] === "D" || values["Output1"] === "D'") {
-      alert("Test pattern found! Fault propagated to primary output.");
       console.log("Test pattern found! Fault propagated to primary output.");
       return true;
     }
@@ -599,18 +655,56 @@ function App() {
 
   const checkObservationPaths = () => {
     const pathsBlocked = dFrontier.length === 0;
-    if (pathsBlocked && !checkForTest(nodeValues)) {
+    if (pathsBlocked && !checkForTest(nodeValues) && !isCleaningUp) { // Added !isCleaningUp
       alert("All observation paths are blocked. Backtracking...");
       console.log("All observation paths are blocked. Initiating backtrack.");
       backtrack();
     }
   };
 
+  // TODO: Add more triggers to make sure of when we check observation paths
   useEffect(() => {
     checkObservationPaths();
-  }, [nodeValues, dFrontier]);
+  }, [nodeValues, dFrontier, isCleaningUp]); // Added isCleaningUp to dependencies
+
 
   const cleanupBasisNodes = () => {
+    if (testPatternFound) {
+      console.log("Test pattern found. Skipping backtracking and proceeding to cleanup.");
+      setIsCleaningUp(true); // Start cleanup
+      console.log("Starting Cleanup Phase");
+      console.log("Basis Nodes Cleanup Assignments:", nodeValues);
+      const newValues = { ...nodeValues };
+      const updatedNodes = [];
+
+      basisNodes.forEach((basisNode) => {
+        if (newValues[basisNode] === "X") {
+          const finalValue = determineFinalValue(basisNode, newValues);
+          newValues[basisNode] = finalValue;
+          if (finalValue !== "X") {
+            updatedNodes.push(basisNode);
+          }
+        }
+      });
+
+      // Update nodeValues before calculating implications
+      setNodeValues(newValues);
+      console.log("Basis Nodes Cleanup Assignments:", newValues);
+
+      // Recalculate implications starting from updated basis nodes
+      updatedNodes.forEach((basisNode) => {
+        const updatedValues = calculateImplications(basisNode, newValues);
+        updateDFrontier(updatedValues);
+        setNodeValues(updatedValues);
+      });
+
+      alert("Cleanup phase complete.");
+      console.log("Cleanup phase complete.");
+      setIsCleaningUp(false); // End cleanup
+      return;
+    }
+
+    setIsCleaningUp(true); // Start cleanup
     const newValues = { ...nodeValues };
     const updatedNodes = [];
 
@@ -717,10 +811,11 @@ function App() {
     setFaultConeQueue([]);
     setIsTracing(false);
     setCurrentGateProcessing(null);
+    setTestPatternFound(false);
+    setIsCleaningUp(false); // Reset cleanup flag
   };
 
   // Identify inputs to the fault site to prevent them from being altered
-  const faultGate = data.nodes.find((n) => n.id === faultSite);
   const faultSiteInputs = getGateInputs(faultSite);
 
   return (
@@ -742,6 +837,7 @@ function App() {
             faultSite={faultSite}
             nodeValues={nodeValues}
             dFrontier={dFrontier}
+            absoluteDominators={absoluteDominators}
             currentGateProcessing={currentGateProcessing} // Pass the current gate
           />
         </div>
