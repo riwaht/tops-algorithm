@@ -55,7 +55,9 @@ function App() {
   const [basisNodes, setBasisNodes] = useState([]);
   const [dominators, setDominators] = useState({});
   const [absoluteDominators, setAbsoluteDominators] = useState({});
-  const [processedDFrontierNodes, setProcessedDFrontierNodes] = useState(new Set());
+  const [processedDFrontierNodes, setProcessedDFrontierNodes] = useState(
+    new Set()
+  );
   const [faultConeQueue, setFaultConeQueue] = useState([]);
   const [isTracing, setIsTracing] = useState(false);
   const [currentGateProcessing, setCurrentGateProcessing] = useState(null);
@@ -64,14 +66,25 @@ function App() {
 
   // Preprocessing to calculate basis-nodes and dominators
   useEffect(() => {
-    const { calculatedBasisNodes, calculatedDominators, calculatedAbsoluteDominators } = preprocessCircuit(data);
+    const {
+      calculatedBasisNodes,
+      calculatedDominators,
+      calculatedAbsoluteDominators,
+    } = preprocessCircuit(data);
     setBasisNodes(calculatedBasisNodes);
     setDominators(calculatedDominators);
     setAbsoluteDominators(calculatedAbsoluteDominators);
   }, [data]);
 
   const preprocessCircuit = (circuitData) => {
-    const calculatedBasisNodes = ["Input1", "Input2", "Input3", "Input4", "Input5", "Input6"];
+    const calculatedBasisNodes = [
+      "Input1",
+      "Input2",
+      "Input3",
+      "Input4",
+      "Input5",
+      "Input6",
+    ];
     const calculatedDominators = {
       Gate1: ["Gate1", "Gate3", "Gate4", "Gate5", "Gate6", "Output1"],
       Gate2: ["Gate2", "Gate3", "Gate4", "Gate5", "Gate6", "Output1"],
@@ -89,21 +102,33 @@ function App() {
     };
 
     // Calculate absolute dominators
-    const outputs = data.nodes.filter((n) => n.label === "Output").map((n) => n.id);
+    const outputs = data.nodes
+      .filter((n) => n.label === "Output")
+      .map((n) => n.id);
     const calculatedAbsoluteDominators = {};
 
     data.nodes.forEach((node) => {
-      const reachableOutputs = getReachableOutputs(node.id, outputs, circuitData);
+      const reachableOutputs = getReachableOutputs(
+        node.id,
+        outputs,
+        circuitData
+      );
       if (reachableOutputs.length === 0) return;
       let intersection = null;
       reachableOutputs.forEach((output) => {
         if (intersection === null) {
           intersection = new Set(calculatedDominators[output]);
         } else {
-          intersection = new Set([...intersection].filter((x) => calculatedDominators[output].includes(x)));
+          intersection = new Set(
+            [...intersection].filter((x) =>
+              calculatedDominators[output].includes(x)
+            )
+          );
         }
       });
-      calculatedAbsoluteDominators[node.id] = intersection ? Array.from(intersection) : [];
+      calculatedAbsoluteDominators[node.id] = intersection
+        ? Array.from(intersection)
+        : [];
     });
 
     return {
@@ -148,7 +173,9 @@ function App() {
       if (newValues[inputId] === "X") {
         const controllingValue = getControllingValue(gateType);
         newValues[inputId] = controllingValue;
-        console.log(`Assigned controlling value "${controllingValue}" to ${inputId}`);
+        console.log(
+          `Assigned controlling value "${controllingValue}" to ${inputId}`
+        );
       }
     });
 
@@ -170,8 +197,12 @@ function App() {
     console.log("Node Values After Fault Sensitization:", newValues);
 
     if (detectConflict(newValues)) {
-      console.log("Conflict detected during fault sensitization. Fault is redundant.");
-      alert("Conflict detected during fault sensitization! Fault is redundant.");
+      console.log(
+        "Conflict detected during fault sensitization. Fault is redundant."
+      );
+      alert(
+        "Conflict detected during fault sensitization! Fault is redundant."
+      );
       setCurrentStep("complete");
     }
   };
@@ -248,7 +279,9 @@ function App() {
           if (newValues[inputId] === "X") {
             const controllingValue = getControllingValue(gateType);
             newValues[inputId] = controllingValue;
-            console.log(`Assigned controlling value "${newValues[inputId]}" to ${inputId}`);
+            console.log(
+              `Assigned controlling value "${newValues[inputId]}" to ${inputId}`
+            );
             queue.push(inputId);
           } else if (newValues[inputId] !== getControllingValue(gateType)) {
             newValues[inputId] = "CONFLICT";
@@ -292,11 +325,11 @@ function App() {
     const [a, b] = inputValues;
 
     const andTable = {
-      "0": { "0": "0", "1": "0", "D": "0", "D'": "0", "X": "0" },
-      "1": { "0": "0", "1": "1", "D": "D", "D'": "D'", "X": "X" },
-      "D": { "0": "0", "1": "D", "D": "D", "D'": "0", "X": "X" },
-      "D'": { "0": "0", "1": "D'", "D": "0", "D'": "D'", "X": "X" },
-      "X": { "0": "0", "1": "X", "D": "X", "D'": "X", "X": "X" },
+      0: { 0: "0", 1: "0", D: "0", "D'": "0", X: "0" },
+      1: { 0: "0", 1: "1", D: "D", "D'": "D'", X: "X" },
+      D: { 0: "0", 1: "D", D: "D", "D'": "0", X: "X" },
+      "D'": { 0: "0", 1: "D'", D: "0", "D'": "D'", X: "X" },
+      X: { 0: "0", 1: "X", D: "X", "D'": "X", X: "X" },
     };
 
     return andTable[a]?.[b] || andTable[b]?.[a] || "X";
@@ -306,11 +339,11 @@ function App() {
     const [a, b] = inputValues;
 
     const orTable = {
-      "0": { "0": "0", "1": "1", "D": "D", "D'": "D'", "X": "X" },
-      "1": { "0": "1", "1": "1", "D": "1", "D'": "1", "X": "1" },
-      "D": { "0": "D", "1": "1", "D": "D", "D'": "1", "X": "1" },
-      "D'": { "0": "D'", "1": "1", "D": "1", "D'": "D'", "X": "1" },
-      "X": { "0": "X", "1": "1", "D": "1", "D'": "1", "X": "1" },
+      0: { 0: "0", 1: "1", D: "D", "D'": "D'", X: "X" },
+      1: { 0: "1", 1: "1", D: "1", "D'": "1", X: "1" },
+      D: { 0: "D", 1: "1", D: "D", "D'": "1", X: "1" },
+      "D'": { 0: "D'", 1: "1", D: "1", "D'": "D'", X: "1" },
+      X: { 0: "X", 1: "1", D: "1", "D'": "1", X: "1" },
     };
 
     return orTable[a]?.[b] || orTable[b]?.[a] || "X";
@@ -320,11 +353,11 @@ function App() {
     const [a, b] = inputValues;
 
     const nandTable = {
-      "0": { "0": "1", "1": "1", "D": "1", "D'": "1", "X": "1" },
-      "1": { "0": "1", "1": "0", "D": "D'", "D'": "D", "X": "X" },
-      "D": { "0": "1", "1": "D'", "D": "X", "D'": "X", "X": "X" },
-      "D'": { "0": "1", "1": "D", "D": "X", "D'": "X", "X": "X" },
-      "X": { "0": "1", "1": "X", "D": "X", "D'": "X", "X": "X" },
+      0: { 0: "1", 1: "1", D: "1", "D'": "1", X: "1" },
+      1: { 0: "1", 1: "0", D: "D'", "D'": "D", X: "X" },
+      D: { 0: "1", 1: "D'", D: "X", "D'": "X", X: "X" },
+      "D'": { 0: "1", 1: "D", D: "X", "D'": "X", X: "X" },
+      X: { 0: "1", 1: "X", D: "X", "D'": "X", X: "X" },
     };
 
     return nandTable[a]?.[b] || nandTable[b]?.[a] || "X";
@@ -334,11 +367,11 @@ function App() {
     const [a, b] = inputValues;
 
     const norTable = {
-      "0": { "0": "1", "1": "0", "D": "D'", "D'": "D", "X": "0" },
-      "1": { "0": "0", "1": "0", "D": "0", "D'": "0", "X": "0" },
-      "D": { "0": "D'", "1": "0", "D": "0", "D'": "0", "X": "0" },
-      "D'": { "0": "D", "1": "0", "D": "0", "D'": "0", "X": "0" },
-      "X": { "0": "0", "1": "0", "D": "0", "D'": "0", "X": "0" },
+      0: { 0: "1", 1: "0", D: "D'", "D'": "D", X: "0" },
+      1: { 0: "0", 1: "0", D: "0", "D'": "0", X: "0" },
+      D: { 0: "D'", 1: "0", D: "0", "D'": "0", X: "0" },
+      "D'": { 0: "D", 1: "0", D: "0", "D'": "0", X: "0" },
+      X: { 0: "0", 1: "0", D: "0", "D'": "0", X: "0" },
     };
 
     return norTable[a]?.[b] || norTable[b]?.[a] || "X";
@@ -348,11 +381,11 @@ function App() {
     const [a, b] = inputValues;
 
     const xorTable = {
-      "0": { "0": "0", "1": "1", "D": "D", "D'": "D'", "X": "X" },
-      "1": { "0": "1", "1": "0", "D": "D'", "D'": "D", "X": "X" },
-      "D": { "0": "D", "1": "D'", "D": "1", "D'": "0", "X": "X" },
-      "D'": { "0": "D'", "1": "D", "D": "0", "D'": "1", "X": "X" },
-      "X": { "0": "X", "1": "X", "D": "X", "D'": "X", "X": "X" },
+      0: { 0: "0", 1: "1", D: "D", "D'": "D'", X: "X" },
+      1: { 0: "1", 1: "0", D: "D'", "D'": "D", X: "X" },
+      D: { 0: "D", 1: "D'", D: "1", "D'": "0", X: "X" },
+      "D'": { 0: "D'", 1: "D", D: "0", "D'": "1", X: "X" },
+      X: { 0: "X", 1: "X", D: "X", "D'": "X", X: "X" },
     };
 
     return xorTable[a]?.[b] || xorTable[b]?.[a] || "X";
@@ -362,11 +395,11 @@ function App() {
     const [a] = inputValues;
 
     const notTable = {
-      "0": "1",
-      "1": "0",
-      "D": "D'",
+      0: "1",
+      1: "0",
+      D: "D'",
       "D'": "D",
-      "X": "X",
+      X: "X",
     };
 
     return notTable[a] || "X";
@@ -383,7 +416,7 @@ function App() {
     "NOR Gate": evaluateNorGate,
     "XOR Gate": evaluateXorGate,
     "NOT Gate": evaluateNotGate,
-    "Output": evaluateOutput, // Updated to use evaluateOutput function
+    Output: evaluateOutput, // Updated to use evaluateOutput function
   };
 
   // Fault Cone Tracing - Initialize Tracing
@@ -436,14 +469,18 @@ function App() {
         if (newValues[inputId] === "X") {
           const controllingValue = getControllingValue(gateType);
           newValues[inputId] = controllingValue;
-          console.log(`Assigned controlling value "${newValues[inputId]}" to ${inputId}`);
+          console.log(
+            `Assigned controlling value "${newValues[inputId]}" to ${inputId}`
+          );
         }
       });
 
       // Do NOT evaluate the fault gate's output to preserve the fault value
       // Enqueue the inputs for further processing if they are gates (not primary inputs)
       inputs.forEach((inputId) => {
-        const isGate = data.nodes.some((node) => node.id === inputId && node.label !== "Input");
+        const isGate = data.nodes.some(
+          (node) => node.id === inputId && node.label !== "Input"
+        );
         if (isGate && !faultConeQueue.includes(inputId)) {
           setFaultConeQueue((prevQueue) => [...prevQueue, inputId]);
         }
@@ -461,8 +498,12 @@ function App() {
 
       // Detect conflicts
       if (detectConflict(newValues)) {
-        alert("Conflict detected during fault cone tracing! Fault is redundant.");
-        console.log("Conflict detected during fault cone tracing. Fault is redundant.");
+        alert(
+          "Conflict detected during fault cone tracing! Fault is redundant."
+        );
+        console.log(
+          "Conflict detected during fault cone tracing. Fault is redundant."
+        );
         setIsTracing(false);
         setCurrentGateProcessing(null);
         return;
@@ -494,19 +535,25 @@ function App() {
       if (newValues[inputId] === "X") {
         const nonControllingValue = getNonControllingValue(gateType);
         newValues[inputId] = nonControllingValue;
-        console.log(`Assigned non-controlling value "${nonControllingValue}" to ${inputId}`);
+        console.log(
+          `Assigned non-controlling value "${nonControllingValue}" to ${inputId}`
+        );
       }
     });
 
     // Evaluate the gate based on its type and inputs
     const inputValues = inputs.map((id) => newValues[id] || "X");
-    console.log(`Evaluating ${gate.label} (${currentGate}): Inputs = ${inputValues}`);
+    console.log(
+      `Evaluating ${gate.label} (${currentGate}): Inputs = ${inputValues}`
+    );
 
     const evaluateGate = gateEvaluationFunctions[gateType];
     if (evaluateGate) {
       const outputValue = evaluateGate(inputValues);
       newValues[currentGate] = outputValue;
-      console.log(`Updated ${gate.label} (${currentGate}): Output = ${newValues[currentGate]}`);
+      console.log(
+        `Updated ${gate.label} (${currentGate}): Output = ${newValues[currentGate]}`
+      );
     } else {
       console.warn(`Unknown gate type: ${gateType}`);
       newValues[currentGate] = "X"; // Assign "X" for unknown gate types
@@ -525,14 +572,18 @@ function App() {
     // Detect conflicts
     if (detectConflict(newValues)) {
       alert("Conflict detected during fault cone tracing! Fault is redundant.");
-      console.log("Conflict detected during fault cone tracing. Fault is redundant.");
+      console.log(
+        "Conflict detected during fault cone tracing. Fault is redundant."
+      );
       setIsTracing(false);
       setCurrentGateProcessing(null);
       return;
     }
 
     // Enqueue subsequent gates driven by the current gate
-    const nextGates = getGateOutputs(currentGate).filter((gateId) => !faultConeQueue.includes(gateId));
+    const nextGates = getGateOutputs(currentGate).filter(
+      (gateId) => !faultConeQueue.includes(gateId)
+    );
     setFaultConeQueue((prevQueue) => [...prevQueue, ...nextGates]);
 
     // Check if a test pattern is found
@@ -565,12 +616,16 @@ function App() {
         if (newValues[inputId] === "X") {
           const nonControllingValue = getNonControllingValue(gateType);
           newValues[inputId] = nonControllingValue;
-          console.log(`Assigned non-controlling value "${nonControllingValue}" to ${inputId}`);
+          console.log(
+            `Assigned non-controlling value "${nonControllingValue}" to ${inputId}`
+          );
         }
       });
 
       const inputValues = inputs.map((id) => newValues[id] || "X");
-      console.log(`Evaluating ${gate.label} (${gateId}): Inputs = ${inputValues}`);
+      console.log(
+        `Evaluating ${gate.label} (${gateId}): Inputs = ${inputValues}`
+      );
 
       // Dynamically retrieve the evaluation function
       const evaluateGate = gateEvaluationFunctions[gateType];
@@ -578,7 +633,9 @@ function App() {
       if (evaluateGate) {
         const outputValue = evaluateGate(inputValues);
         newValues[gateId] = outputValue;
-        console.log(`Updated ${gate.label} (${gateId}): Output = ${newValues[gateId]}`);
+        console.log(
+          `Updated ${gate.label} (${gateId}): Output = ${newValues[gateId]}`
+        );
       } else {
         console.warn(`Unknown gate type: ${gateType}`);
         newValues[gateId] = "X"; // Assign "X" for unknown gate types
@@ -590,16 +647,22 @@ function App() {
 
     if (detectConflict(newValues)) {
       alert("Conflict detected during fault cone tracing! Fault is redundant.");
-      console.log("Conflict detected during fault cone tracing. Fault is redundant.");
+      console.log(
+        "Conflict detected during fault cone tracing. Fault is redundant."
+      );
     }
   };
 
   const getGateInputs = (gateId) => {
-    return data.links.filter((link) => link.target === gateId).map((link) => link.source);
+    return data.links
+      .filter((link) => link.target === gateId)
+      .map((link) => link.source);
   };
 
   const getGateOutputs = (gateId) => {
-    return data.links.filter((link) => link.source === gateId).map((link) => link.target);
+    return data.links
+      .filter((link) => link.source === gateId)
+      .map((link) => link.target);
   };
 
   const getControllingValue = (gateType) => {
@@ -610,7 +673,7 @@ function App() {
       "NOR Gate": "1",
       "XOR Gate": "X", // XOR gates require special handling
       "NOT Gate": "X", // For NOT gates, special handling is needed
-      "Output": "X",
+      Output: "X",
     };
     return gateControllingValues[gateType] || "X";
   };
@@ -623,7 +686,7 @@ function App() {
       "NOR Gate": "0",
       "XOR Gate": "0", // XOR gates require special handling
       "NOT Gate": "X", // For NOT gates, special handling is needed
-      "Output": "X",
+      Output: "X",
     };
     return gateNonControllingValues[gateType] || "X";
   };
@@ -655,7 +718,8 @@ function App() {
 
   const checkObservationPaths = () => {
     const pathsBlocked = dFrontier.length === 0;
-    if (pathsBlocked && !checkForTest(nodeValues) && !isCleaningUp) { // Added !isCleaningUp
+    if (pathsBlocked && !checkForTest(nodeValues) && !isCleaningUp) {
+      // Added !isCleaningUp
       alert("All observation paths are blocked. Backtracking...");
       console.log("All observation paths are blocked. Initiating backtrack.");
       backtrack();
@@ -667,10 +731,11 @@ function App() {
     checkObservationPaths();
   }, [nodeValues, dFrontier, isCleaningUp]); // Added isCleaningUp to dependencies
 
-
   const cleanupBasisNodes = () => {
     if (testPatternFound) {
-      console.log("Test pattern found. Skipping backtracking and proceeding to cleanup.");
+      console.log(
+        "Test pattern found. Skipping backtracking and proceeding to cleanup."
+      );
       setIsCleaningUp(true); // Start cleanup
       console.log("Starting Cleanup Phase");
       console.log("Basis Nodes Cleanup Assignments:", nodeValues);
@@ -819,7 +884,14 @@ function App() {
   const faultSiteInputs = getGateInputs(faultSite);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        width: "100vw",
+      }}
+    >
       <header
         style={{
           padding: "10px",
@@ -853,7 +925,7 @@ function App() {
           />
           <StackView
             searchStack={searchStack}
-            onNodeProcessed={() => { }}
+            onNodeProcessed={() => {}}
             onReset={handleReset}
           />
         </div>
