@@ -1,150 +1,55 @@
-import java.io.*;
+import java.io.IOException;
 import java.util.*;
-
-import java.util.*;
-
-class Gate {
-    String type;
-    List<Integer> inputs;
-    int output;
-
-    public Gate(String type, int output, List<Integer> inputs) {
-        this.type = type;
-        this.output = output;
-        this.inputs = inputs;
-    }
-
-    public int evaluate(Map<Integer, Integer> values) {
-        List<Integer> inputValues = new ArrayList<>();
-        for (int input : inputs) {
-            if (!values.containsKey(input)) {
-                throw new IllegalStateException("Input values are not properly initialized for gate: " + type);
-            }
-            inputValues.add(values.get(input));
-        }
-
-        switch (type.toUpperCase()) {
-            case "AND":
-                return inputValues.stream().reduce(1, (a, b) -> a & b);
-            case "OR":
-                return inputValues.stream().reduce(0, (a, b) -> a | b);
-            case "NAND":
-                return ~(inputValues.stream().reduce(1, (a, b) -> a & b)) & 1;
-            case "NOR":
-                return ~(inputValues.stream().reduce(0, (a, b) -> a | b)) & 1;
-            case "XOR":
-                return inputValues.stream().reduce(0, (a, b) -> a ^ b);
-            case "NOT":
-                if (inputValues.size() != 1) {
-                    throw new IllegalArgumentException("NOT gate must have exactly one input.");
-                }
-                return ~inputValues.get(0) & 1;
-            default:
-                throw new IllegalArgumentException("Unknown gate type: " + type);
-        }
-    }
-
-    @Override
-    public String toString() {
-        return "Gate{" +
-                "type='" + type + '\'' +
-                ", inputs=" + inputs +
-                ", output=" + output +
-                '}';
-    }
-}
-
-class Circuit {
-    Set<Integer> inputs = new HashSet<>();
-    Set<Integer> outputs = new HashSet<>();
-    Map<Integer, Gate> gates = new HashMap<>();
-
-    public void addInput(int input) {
-        inputs.add(input);
-    }
-
-    public void addOutput(int output) {
-        outputs.add(output);
-    }
-
-    public void addGate(String type, int output, List<Integer> inputs) {
-        gates.put(output, new Gate(type, output, inputs));
-    }
-
-    public void parseBenchFile(String filePath) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.startsWith("#") || line.isEmpty()) continue;
-
-                if (line.startsWith("INPUT")) {
-                    int input = Integer.parseInt(line.replaceAll("[^0-9]", ""));
-                    addInput(input);
-                } else if (line.startsWith("OUTPUT")) {
-                    int output = Integer.parseInt(line.replaceAll("[^0-9]", ""));
-                    addOutput(output);
-                } else {
-                    String[] parts = line.split("=");
-                    int output = Integer.parseInt(parts[0].trim());
-                    String[] gateParts = parts[1].trim().split("[()]");
-                    String type = gateParts[0].trim();
-                    String[] inputStrings = gateParts[1].split(",");
-                    List<Integer> gateInputs = new ArrayList<>();
-                    for (String input : inputStrings) {
-                        gateInputs.add(Integer.parseInt(input.trim()));
-                    }
-                    addGate(type, output, gateInputs);
-                }
-            }
-        }
-    }
-
-    public void printCircuit() {
-        System.out.println("Inputs: " + inputs);
-        System.out.println("Outputs: " + outputs);
-        System.out.println("Gates:");
-        for (Gate gate : gates.values()) {
-            System.out.println(gate);
-        }
-    }
-}
-
-
 
 public class BenchmarkParser {
     public static void main(String[] args) {
         Circuit circuit = new Circuit();
+        Scanner scanner = new Scanner(System.in);
         try {
             // Parse the benchmark file
-            String filePath = "C:\\Users\\User\\Desktop\\UNI\\2024Fall\\COE529\\Project\\TOPS\\src\\c17.bench";
+            String filePath = "C:\\Users\\User\\Desktop\\UNI\\2024Fall\\COE529\\Project\\tops-algorithm\\backend\\TOPS\\src\\bench\\c17.bench";
             circuit.parseBenchFile(filePath);
 
             // Print the parsed circuit for verification
             circuit.printCircuit();
 
+            // Initialize inputValues with all primary inputs
+            Map<String, Integer> inputValues = new HashMap<>();
+
+            // Allow user to set input values through console
+            System.out.println("\nSet the values for the following inputs:");
+            for (String input : circuit.primaryInputs) {
+                System.out.print("Enter value for input " + input + " (0 or 1): ");
+                int value = scanner.nextInt();
+                while (value != 0 && value != 1) {
+                    System.out.print("Invalid value. Enter 0 or 1 for input " + input + ": ");
+                    value = scanner.nextInt();
+                }
+                inputValues.put(input, value);
+            }
+
+            // Print assigned input values
+            System.out.println("\nAssigned Input Values:");
+            for (String input : circuit.primaryInputs) {
+                System.out.println("Input " + input + ": " + inputValues.get(input));
+            }
+
             // Initialize the Simulation class
             Simulation simulation = new Simulation(circuit);
 
-            // Input vector for simulation
-            Map<Integer, Integer> inputValues = Map.of(
-                    1, 1,
-                    2, 1,
-                    3, 0,
-                    6, 1,
-                    7, 0
-            );
+            // Simulate the circuit without faults
+            Map<String, Integer> outputValues = simulation.simulate(inputValues);
+            System.out.println("\nOutput Values at the Gates:");
+            for (String output : circuit.primaryOutputs) {
+                System.out.println("Output " + output + ": " + outputValues.get(output));
+            }
 
-            // Simulate the circuit
-            Map<Integer, Integer> outputValues = simulation.simulate(inputValues);
-
-            // Print the output values
-            System.out.println("Output: " + outputValues);
         } catch (IOException e) {
             System.err.println("Error reading benchmark file: " + e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            scanner.close();
         }
     }
 }
-
