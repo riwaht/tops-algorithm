@@ -1,0 +1,29 @@
+# Ripple Carry Adder (2-bit)
+# 6 inputs
+# 3 outputs
+# 6 XORs, 4 ANDs, 2 ORs
+
+INPUT(A1)
+INPUT(B1)
+INPUT(Cin1)
+INPUT(A2)
+INPUT(B2)
+INPUT(Cin2)
+
+OUTPUT(Sum1)
+OUTPUT(Sum2)
+OUTPUT(Cout)
+
+# First full adder
+XOR1 = XOR(A1, B1)
+Sum1 = XOR(XOR1, Cin1)
+AND1 = AND(A1, B1)
+AND2 = AND(XOR1, Cin1)
+Cout1 = OR(AND1, AND2)
+
+# Second full adder
+XOR2 = XOR(A2, B2)
+Sum2 = XOR(XOR2, Cout1)
+AND3 = AND(A2, B2)
+AND4 = AND(XOR2, Cout1)
+Cout = OR(AND3, AND4)

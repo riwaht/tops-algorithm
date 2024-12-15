@@ -32,10 +32,8 @@ public class FaultSimulator {
         // Create a copy of input values to modify
         Map<String, Integer> values = new HashMap<>(inputValues);
 
-        // Inject fault only if it's not a primary input
-        if (!circuit.primaryInputs.contains(fault.node)) {
-            values.put(fault.node, fault.stuckAtValue);
-        }
+        // Inject fault, regardless of whether it's a primary input or not
+        values.put(fault.node, fault.stuckAtValue);
 
         // Get the topological order of the circuit
         List<String> topologicalOrder = simulation.levelizeCircuit();
@@ -148,4 +146,23 @@ public class FaultSimulator {
         // Calculate fault coverage
         return (double) detectedFaults / faults.size();
     }
+
+    public double serialFaultSimulationWithMetrics(List<Fault> faults, List<Map<String, Integer>> testVectors) {
+        long startTime = System.currentTimeMillis();
+        double coverage = serialFaultSimulation(faults, testVectors);
+        long endTime = System.currentTimeMillis();
+        System.out.println("Serial Fault Simulation Time: " + (endTime - startTime) + " ms");
+        System.out.println("Serial Fault Coverage: " + (coverage * 100) + "%");
+        return (endTime - startTime) / 1000.0; // Return time in seconds
+    }
+
+    public double parallelFaultSimulationWithMetrics(List<Fault> faults, List<Map<String, Integer>> testVectors) {
+        long startTime = System.currentTimeMillis();
+        double coverage = parallelFaultSimulation(faults, testVectors);
+        long endTime = System.currentTimeMillis();
+        System.out.println("Parallel Fault Simulation Time: " + (endTime - startTime) + " ms");
+        System.out.println("Parallel Fault Coverage: " + (coverage * 100) + "%");
+        return (endTime - startTime) / 1000.0; // Return time in seconds
+    }
+
 }

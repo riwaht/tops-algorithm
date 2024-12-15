@@ -7,7 +7,7 @@ public class BenchmarkParser {
         Scanner scanner = new Scanner(System.in);
         try {
             // Parse the benchmark file
-            String filePath = "C:\\Users\\User\\Desktop\\UNI\\2024Fall\\COE529\\Project\\tops-algorithm\\backend\\TOPS\\src\\bench\\c17.bench";
+            String filePath = "C:\\Users\\User\\Desktop\\UNI\\2024Fall\\COE529\\Project\\tops-algorithm\\backend\\TOPS\\src\\bench\\499.bench";
             circuit.parseBenchFile(filePath);
 
             // Print the parsed circuit for verification
